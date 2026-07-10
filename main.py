@@ -1,27 +1,23 @@
+import os
 from flask import Flask, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # Isso libera o acesso para o Stremio
-
-MANIFEST = {
-    "id": "it.cinema.italiano",
-    "version": "1.0.0",
-    "name": "Cinema Italiano",
-    "description": "La collezione di film, serie e canali TV italiani.",
-    "logo": "https://raw.githubusercontent.com/juvesorocaba-boop/stremio-addon-ita/main/logo.png",
-    "types": ["movie", "series"],
-    "resources": ["catalog"] # Deixamos apenas catalog por enquanto para não dar erro
-}
+CORS(app)
 
 @app.route('/manifest.json')
-def addon_manifest():
-    return jsonify(MANIFEST)
-
-# Rota básica de catálogo para o Stremio não reclamar
-@app.route('/catalog/movie/film_italiani.json')
-def catalog():
-    return jsonify({"metas": []})
+def manifest():
+    return jsonify({
+        "id": "it.cinema.italiano",
+        "version": "1.0.0",
+        "name": "Cinema Italiano",
+        "description": "Filmes e séries italianas",
+        "types": ["movie", "series"],
+        "resources": ["catalog"],
+        "catalogs": []
+    })
 
 if __name__ == '__main__':
-    app.run()
+    # O Render exige que você utilize a porta da variável de ambiente
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
