@@ -1,0 +1,48 @@
+{
+  "filmes": [
+    {
+      "id": "tt0080684",
+      "titulo": "Filme Ita 1",
+      "url": "https://archive.org/download/exemplo_video/filme1.mp4"
+    },
+    {
+      "id": "tt0090605",
+      "titulo": "Filme Ita 2",
+      "url": "https://archive.org/download/exemplo_video/filme2.mp4"
+    }
+  ],
+  "series": [
+    {
+      "id": "tt0118301",
+      "titulo": "Serie Ita 1",
+      "temporadas": {
+        "1": {
+          "1": "https://archive.org/download/exemplo_video/s01e01.mp4",
+          "2": "https://archive.org/download/exemplo_video/s01e02.mp4"
+        }
+      }
+    },
+    {
+      "id": "tt0242150",
+      "titulo": "Serie Ita 2",
+      "temporadas": {
+        "1": {
+          "1": "https://archive.org/download/exemplo_video/s01e01.mp4",
+          "2": "https://archive.org/download/exemplo_video/s01e02.mp4"
+        }
+      }
+    }
+  ],
+  "canais": [
+    {
+      "id": "rai_1",
+      "titulo": "RAI 1 Ao Vivo",
+      "url": "https://live.static.rai.it/rai1.m3u8"
+    },
+    {
+      "id": "canale_5",
+      "titulo": "Canale 5 Ao Vivo",
+      "url": "https://live.static.mediaset/c5.m3u8"
+    }
+  ]
+}
