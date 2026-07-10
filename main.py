@@ -1,3 +1,7 @@
+from flask import Flask, jsonify
+
+app = Flask(__name__)
+
 MANIFEST = {
     "id": "it.cinema.italiano",
     "version": "1.0.0",
@@ -24,3 +28,12 @@ MANIFEST = {
     ],
     "resources": ["catalog", "meta", "stream"]
 }
+
+@app.route('/manifest.json')
+def addon_manifest():
+    return jsonify(MANIFEST)
+
+if __name__ == '__main__':
+    import os
+    port = int(os.environ.get('PORT', 8000))
+    app.run(host='0.0.0.0', port=port)
