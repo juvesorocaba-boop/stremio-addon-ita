@@ -1,12 +1,15 @@
 import os
 import json
-from flask import Flask, jsonify, request
+import requests
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 
-# Carrega o banco de dados uma vez ao iniciar
+TMDB_API_KEY = os.environ.get("TMDB_API_KEY")
+TMDB_BASE = "https://api.themoviedb.org/3"
+
 with open("database.json", "r", encoding="utf-8") as f:
     DB = json.load(f)
 
@@ -27,35 +30,110 @@ MANIFEST = {
         {"type": "tv", "id": "cinema_ita_canais", "name": "TV Italiana in Diretta"}
     ]
 }
+
+# Cache simples em memória pra não bater na TMDB toda hora
+_tmdb_cache = {}
+
+
+def get_tmdb_meta(imdb_id, tipo):
+    """Busca metadata em italiano no TMDB via IMDB ID.
+    Retorna None se o conteúdo não for de idioma original italiano
+    (filtro anti-erro do escopo original)."""
+    if imdb_id in _tmdb_cache:
+        return _tmdb_cache[imdb_id]
+
+    if not TMDB_API_KEY:
+        return None
+
+    try:
+        find_url = f"{TMDB_BASE}/find/{imdb_id}"
+        params = {
+            "api_key": TMDB_API_KEY,
+            "external_source": "imdb_id",
+            "language": "it-IT"
+        }
+        r = requests.get(find_url, params=params, timeout=8)
+        data = r.json()
+
+        results = data.get("movie_results") or data.get("tv_results")
+        if not results:
+            _tmdb_cache[imdb_id] = None
+            return None
+
+        item = results[0]
+        original_language = item.get("original_language")
+
+        # REGRA MESTRE: só aceita se o idioma original for italiano
+        if original_language != "it":
+            _tmdb_cache[imdb_id] = None
+            return None
+
+        titulo = item.get("title") or item.get("name")
+        sinopse = item.get("overview") or ""
+        poster_path = item.get("poster_path")
+        poster = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else ""
+
+        meta = {"titulo": titulo, "sinopse": sinopse, "poster": poster}
+        _tmdb_cache[imdb_id] = meta
+        return meta
+
+    except Exception:
+        return None
+
+
 @app.route('/manifest.json')
 def manifest():
     return jsonify(MANIFEST)
 
 
-@app.route('/catalog/<type>/<id>.json')
-def catalog(type, id):
+@app.route('/logo.png')
+def logo():
+    return send_from_directory('.', 'logo.png')
+
+
+@app.route('/catalog/<tipo>/<cat_id>.json')
+@app.route('/catalog/<tipo>/<cat_id>/<extra>.json')
+def catalog(tipo, cat_id, extra=None):
+    search_query = None
+    if extra and extra.startswith("search="):
+        search_query = extra.replace("search=", "").strip().lower()
+
     metas = []
 
-    if type == "movie":
+    if tipo == "movie":
         for item in DB.get("filmes", []):
+            tmdb = get_tmdb_meta(item["id"], "movie")
+            if not tmdb:
+                continue  # não é italiano de verdade, ignora
+            if search_query and search_query not in tmdb["titulo"].lower():
+                continue
             metas.append({
                 "id": item["id"],
                 "type": "movie",
-                "name": item["titulo"],
-                "poster": item.get("poster", "")
+                "name": tmdb["titulo"],
+                "poster": tmdb["poster"],
+                "description": tmdb["sinopse"]
             })
 
-    elif type == "series":
+    elif tipo == "series":
         for item in DB.get("series", []):
+            tmdb = get_tmdb_meta(item["id"], "series")
+            if not tmdb:
+                continue
+            if search_query and search_query not in tmdb["titulo"].lower():
+                continue
             metas.append({
                 "id": item["id"],
                 "type": "series",
-                "name": item["titulo"],
-                "poster": item.get("poster", "")
+                "name": tmdb["titulo"],
+                "poster": tmdb["poster"],
+                "description": tmdb["sinopse"]
             })
 
-    elif type == "tv":
+    elif tipo == "tv":
         for item in DB.get("canais", []):
+            if search_query and search_query not in item["titulo"].lower():
+                continue
             metas.append({
                 "id": item["id"],
                 "type": "tv",
@@ -66,18 +144,26 @@ def catalog(type, id):
     return jsonify({"metas": metas})
 
 
-@app.route('/meta/<type>/<id>.json')
-def meta(type, id):
-    if type == "movie":
+@app.route('/meta/<tipo>/<meta_id>.json')
+def meta(tipo, meta_id):
+    if tipo == "movie":
         for item in DB.get("filmes", []):
-            if item["id"] == id:
+            if item["id"] == meta_id:
+                tmdb = get_tmdb_meta(item["id"], "movie")
+                if not tmdb:
+                    return jsonify({"meta": {}}), 404
                 return jsonify({"meta": {
-                    "id": item["id"], "type": "movie", "name": item["titulo"]
+                    "id": item["id"], "type": "movie",
+                    "name": tmdb["titulo"], "poster": tmdb["poster"],
+                    "description": tmdb["sinopse"]
                 }})
 
-    elif type == "series":
+    elif tipo == "series":
         for item in DB.get("series", []):
-            if item["id"] == id:
+            if item["id"] == meta_id:
+                tmdb = get_tmdb_meta(item["id"], "series")
+                if not tmdb:
+                    return jsonify({"meta": {}}), 404
                 videos = []
                 for temporada, episodios in item.get("temporadas", {}).items():
                     for episodio in episodios:
@@ -88,13 +174,14 @@ def meta(type, id):
                             "episode": int(episodio)
                         })
                 return jsonify({"meta": {
-                    "id": item["id"], "type": "series", "name": item["titulo"],
-                    "videos": videos
+                    "id": item["id"], "type": "series",
+                    "name": tmdb["titulo"], "poster": tmdb["poster"],
+                    "description": tmdb["sinopse"], "videos": videos
                 }})
 
-    elif type == "tv":
+    elif tipo == "tv":
         for item in DB.get("canais", []):
-            if item["id"] == id:
+            if item["id"] == meta_id:
                 return jsonify({"meta": {
                     "id": item["id"], "type": "tv", "name": item["titulo"]
                 }})
@@ -102,30 +189,29 @@ def meta(type, id):
     return jsonify({"meta": {}}), 404
 
 
-@app.route('/stream/<type>/<id>.json')
-def stream(type, id):
+@app.route('/stream/<tipo>/<stream_id>.json')
+def stream(tipo, stream_id):
     streams = []
 
-    if type == "movie":
+    if tipo == "movie":
         for item in DB.get("filmes", []):
-            if item["id"] == id:
-                streams.append({"title": "Servidor 1", "url": item["url"]})
+            if item["id"] == stream_id:
+                streams.append({"title": "Server", "url": item["url"]})
 
-    elif type == "series":
-        # id vem como tt0118301:1:1
-        parts = id.split(":")
+    elif tipo == "series":
+        parts = stream_id.split(":")
         base_id = parts[0]
         for item in DB.get("series", []):
             if item["id"] == base_id and len(parts) == 3:
                 temporada, episodio = parts[1], parts[2]
                 url = item.get("temporadas", {}).get(temporada, {}).get(episodio)
                 if url:
-                    streams.append({"title": "Servidor 1", "url": url})
+                    streams.append({"title": "Server", "url": url})
 
-    elif type == "tv":
+    elif tipo == "tv":
         for item in DB.get("canais", []):
-            if item["id"] == id:
-                streams.append({"title": "Ao Vivo", "url": item["url"]})
+            if item["id"] == stream_id:
+                streams.append({"title": "Diretta", "url": item["url"]})
 
     return jsonify({"streams": streams})
 
