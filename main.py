@@ -15,7 +15,7 @@ MANIFEST = {
     "version": "1.0.0",
     "name": "Cinema Italiano",
     "description": "Film, serie TV e canali in diretta, esclusivamente in lingua italiana originale",
-    "logo": "https://stremio-addon-ita.onrender.com/logo.png",
+    "logo": "https://raw.githubusercontent.com/juvesorocaba-boop/stremio-addon-ita/main/logo.png",
     "types": ["movie", "series", "tv"],
     "resources": ["catalog", "meta", "stream"],
     "idPrefixes": ["tt", "rai_", "canale_"],
