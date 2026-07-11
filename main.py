@@ -4,6 +4,7 @@ import base64
 import requests
 from flask import Flask, jsonify, request, send_from_directory, render_template
 from flask_cors import CORS
+from torrent_source import buscar_stream_torrent
 
 app = Flask(__name__)
 CORS(app)
@@ -377,6 +378,20 @@ def stream(tipo, stream_id, config_str=None):
                 ano = tmdb["ano"] if tmdb and tmdb.get("ano") else None
                 nome = f"{item['titulo']} ({ano})" if ano else item["titulo"]
                 streams.append(build_stream(nome, item["url"]))
+                
+                # Busca extra nos indexadores
+                novos_links = buscar_stream_torrent(nome)
+                for link in novos_links:
+                    streams.append(build_stream(nome + " (Extra)", link))
+                    
+                    # --- ACRESCENTE ESTA PARTE APÓS O "for" DO BANCO DE DADOS ---
+        tmdb_extra = get_tmdb_meta(stream_id, "movie")
+        if tmdb_extra:
+            nome_filme = tmdb_extra["titulo"]
+            novos_links = buscar_stream_torrent(nome_filme)
+            for link in novos_links:
+                streams.append(build_stream(nome_filme + " (Extra)", link))
+        # -----------------------------------------------------------
 
     elif tipo == "series":
         parts = stream_id.split(":")
