@@ -4,7 +4,12 @@ import base64
 import requests
 from flask import Flask, jsonify, request, send_from_directory, render_template
 from flask_cors import CORS
-from torrent_source import buscar_stream_torrent
+
+try:
+    from torrent_source import buscar_stream_torrent
+except Exception:
+    def buscar_stream_torrent(nome):
+        return []
 
 app = Flask(__name__)
 CORS(app)
