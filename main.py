@@ -1,22 +1,9 @@
 import os
 import json
-import requests
-from flask import Flask, jsonify, request, send_from_directory
-from flask_cors import CORS
 import base64
-import json
-from flask import render_template
-
-def parse_config(config_str):
-    """Decodifica il config (qualità/provider/token) dal segmento URL, se presente."""
-    if not config_str:
-        return {}
-    try:
-        padded = config_str + "=" * (-len(config_str) % 4)
-        decoded = base64.urlsafe_b64decode(padded.encode()).decode()
-        return json.loads(decoded)
-    except Exception:
-        return {}
+import requests
+from flask import Flask, jsonify, request, send_from_directory, render_template
+from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
@@ -42,11 +29,28 @@ MANIFEST = {
         {"type": "series", "id": "cinema_ita_series", "name": "Serie TV Italiane",
          "extra": [{"name": "search"}]},
         {"type": "tv", "id": "cinema_ita_canais", "name": "TV Italiana in Diretta"}
-    ]
+    ],
+    # Isso é o que faz a engrenagem de configurações aparecer no Stremio
+    "behaviorHints": {
+        "configurable": True,
+        "configurationRequired": False
+    }
 }
 
 # Cache simples em memória pra não bater na TMDB toda hora
 _tmdb_cache = {}
+
+
+def parse_config(config_str):
+    """Decodifica o config (qualità/provider/token) vindo do segmento da URL, se existir."""
+    if not config_str:
+        return {}
+    try:
+        padded = config_str + "=" * (-len(config_str) % 4)
+        decoded = base64.urlsafe_b64decode(padded.encode()).decode()
+        return json.loads(decoded)
+    except Exception:
+        return {}
 
 
 def get_tmdb_meta(imdb_id, tipo):
@@ -95,8 +99,13 @@ def get_tmdb_meta(imdb_id, tipo):
         return None
 
 
+# ---------------------------------------------------------------------------
+# Manifest / logo / configure
+# ---------------------------------------------------------------------------
+
 @app.route('/manifest.json')
-def manifest():
+@app.route('/<config_str>/manifest.json')
+def manifest(config_str=None):
     return jsonify(MANIFEST)
 
 
@@ -105,18 +114,24 @@ def logo():
     return send_from_directory('.', 'logo.png')
 
 
-@app.route('/catalog/<tipo>/<cat_id>.json')
-@app.route('/catalog/<tipo>/<cat_id>/<extra>.json')
-def catalog(tipo, cat_id, extra=None):
-    search_query = None
-    if extra and extra.startswith("search="):
-        search_query = extra.replace("search=", "").strip().lower()
-        
-        
 @app.route("/configure")
 @app.route("/<config_str>/configure")
 def configure(config_str=None):
     return render_template("configure.html")
+
+
+# ---------------------------------------------------------------------------
+# Catalog
+# ---------------------------------------------------------------------------
+
+@app.route('/catalog/<tipo>/<cat_id>.json')
+@app.route('/catalog/<tipo>/<cat_id>/<extra>.json')
+@app.route('/<config_str>/catalog/<tipo>/<cat_id>.json')
+@app.route('/<config_str>/catalog/<tipo>/<cat_id>/<extra>.json')
+def catalog(tipo, cat_id, extra=None, config_str=None):
+    search_query = None
+    if extra and extra.startswith("search="):
+        search_query = extra.replace("search=", "").strip().lower()
 
     metas = []
 
@@ -164,8 +179,13 @@ def configure(config_str=None):
     return jsonify({"metas": metas})
 
 
+# ---------------------------------------------------------------------------
+# Meta
+# ---------------------------------------------------------------------------
+
 @app.route('/meta/<tipo>/<meta_id>.json')
-def meta(tipo, meta_id):
+@app.route('/<config_str>/meta/<tipo>/<meta_id>.json')
+def meta(tipo, meta_id, config_str=None):
     if tipo == "movie":
         for item in DB.get("filmes", []):
             if item["id"] == meta_id:
@@ -209,8 +229,17 @@ def meta(tipo, meta_id):
     return jsonify({"meta": {}}), 404
 
 
+# ---------------------------------------------------------------------------
+# Stream
+# ---------------------------------------------------------------------------
+
 @app.route('/stream/<tipo>/<stream_id>.json')
-def stream(tipo, stream_id):
+@app.route('/<config_str>/stream/<tipo>/<stream_id>.json')
+def stream(tipo, stream_id, config_str=None):
+    cfg = parse_config(config_str)
+    # cfg pode ter: cfg.get("qualities") -> lista, ex ["1080p", "720p"]
+    # cfg.get("provider"), cfg.get("token") -> reservados pra uso futuro
+
     streams = []
 
     if tipo == "movie":

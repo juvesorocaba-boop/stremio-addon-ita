@@ -41,7 +41,6 @@
     padding:44px 40px 36px;
     overflow:hidden;
   }
-  /* sprocket holes — signature element, film-reel edge */
   .sprockets{
     position:absolute;
     left:0; right:0;
@@ -113,6 +112,53 @@
     background-repeat:no-repeat;
     background-position:right 16px center;
   }
+
+  /* --- checkboxes de qualidade (multi-seleção) --- */
+  .quality-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .quality-chip{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:11px 14px;
+    border-radius:10px;
+    border:1px solid rgba(201,162,75,0.3);
+    background:rgba(0,0,0,0.2);
+    cursor:pointer;
+    user-select:none;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .quality-chip.all-option{
+    grid-column:1 / -1;
+    background:rgba(201,162,75,0.08);
+  }
+  .quality-chip:hover{ border-color:rgba(201,162,75,0.6); }
+  .quality-chip input{
+    appearance:none;
+    width:17px; height:17px;
+    border-radius:5px;
+    border:1.5px solid var(--gold);
+    background:transparent;
+    position:relative;
+    cursor:pointer;
+    flex:0 0 auto;
+  }
+  .quality-chip input:checked{
+    background:var(--gold);
+  }
+  .quality-chip input:checked::after{
+    content:"✓";
+    position:absolute;
+    top:-2px; left:2px;
+    font-size:13px;
+    color:var(--wine-deep);
+    font-weight:700;
+  }
+  .quality-chip span{ font-size:14px; }
+
   .token-field{
     max-height:0;
     opacity:0;
@@ -183,8 +229,9 @@
     display:flex;
     justify-content:space-between;
     margin-bottom:6px;
+    gap:12px;
   }
-  .result-row b{ color:var(--ink); font-weight:600; }
+  .result-row b{ color:var(--ink); font-weight:600; text-align:right; }
   .link-box{
     margin-top:14px;
     font-size:12px;
@@ -228,17 +275,32 @@
 
   <div class="eyebrow">Cinema Italiano</div>
   <h1>Configura il tuo addon</h1>
-  <p class="subtitle">Scegli qualità e provider. Genereremo il tuo link di installazione personale.</p>
+  <p class="subtitle">Scegli le qualità e il provider. Genereremo il tuo link di installazione personale.</p>
 
   <div class="field">
-    <label for="quality">Qualità preferita</label>
-    <select id="quality">
-      <option value="auto">Auto (migliore disponibile)</option>
-      <option value="2160p">4K — 2160p</option>
-      <option value="1080p" selected>1080p</option>
-      <option value="720p">720p</option>
-      <option value="480p">480p</option>
-    </select>
+    <label>Qualità (puoi selezionarne più di una)</label>
+    <div class="quality-grid">
+      <label class="quality-chip all-option">
+        <input type="checkbox" id="q-all" onchange="toggleAll()">
+        <span>Tutte / Alta qualità</span>
+      </label>
+      <label class="quality-chip">
+        <input type="checkbox" class="q-item" value="2160p" onchange="onItemChange()">
+        <span>4K — 2160p</span>
+      </label>
+      <label class="quality-chip">
+        <input type="checkbox" class="q-item" value="1080p" checked onchange="onItemChange()">
+        <span>1080p</span>
+      </label>
+      <label class="quality-chip">
+        <input type="checkbox" class="q-item" value="720p" checked onchange="onItemChange()">
+        <span>720p</span>
+      </label>
+      <label class="quality-chip">
+        <input type="checkbox" class="q-item" value="480p" onchange="onItemChange()">
+        <span>480p</span>
+      </label>
+    </div>
   </div>
 
   <div class="field">
@@ -277,6 +339,17 @@
 </div>
 
 <script>
+  function toggleAll(){
+    const all = document.getElementById('q-all').checked;
+    document.querySelectorAll('.q-item').forEach(cb => cb.checked = all);
+  }
+
+  function onItemChange(){
+    const items = document.querySelectorAll('.q-item');
+    const allChecked = Array.from(items).every(cb => cb.checked);
+    document.getElementById('q-all').checked = allChecked;
+  }
+
   function toggleToken(){
     const provider = document.getElementById('provider').value;
     const field = document.getElementById('tokenField');
@@ -294,19 +367,20 @@
   let manifestUrl = "";
 
   function generateLink(){
-    const quality = document.getElementById('quality').value;
+    const qualities = Array.from(document.querySelectorAll('.q-item:checked')).map(cb => cb.value);
     const provider = document.getElementById('provider').value;
     const token = document.getElementById('token').value.trim();
 
-    const config = { quality, provider };
+    const config = { qualities, provider };
     if(provider !== 'none' && token){ config.token = token; }
 
     const encoded = b64urlEncode(JSON.stringify(config));
     const host = window.location.origin;
     manifestUrl = host + "/" + encoded + "/manifest.json";
 
+    const labels = { "2160p":"4K", "1080p":"1080p", "720p":"720p", "480p":"480p" };
     document.getElementById('rQuality').textContent =
-      { auto:"Auto", "2160p":"4K", "1080p":"1080p", "720p":"720p", "480p":"480p" }[quality];
+      qualities.length ? qualities.map(q => labels[q]).join(", ") : "Nessuna selezionata";
     document.getElementById('rProvider').textContent =
       { none:"Nessuno (diretto)", realdebrid:"Real-Debrid", alldebrid:"AllDebrid", torbox:"TorBox" }[provider];
     document.getElementById('linkBox').textContent = manifestUrl;
