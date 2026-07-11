@@ -371,7 +371,7 @@ def stream(tipo, stream_id, config_str=None):
 
     streams = []
 
-   if tipo == "movie":
+    if tipo == "movie":
         # 1. BUSCA UNIVERSAL (Prioridade agora)
         # Buscamos sempre, usando o ID do filme solicitado pelo Stremio
         tmdb_extra = get_tmdb_meta(stream_id, "movie")
