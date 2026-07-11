@@ -1,46 +1,37 @@
-import cloudscraper
+import requests
 from bs4 import BeautifulSoup
-from concurrent.futures import ThreadPoolExecutor
 
-# Configuração Central de Provedores
-# Cada entrada possui: url base de busca, seletor CSS e se precisa entrar no link (is_indirect)
-PROVIDERS = {
-    "1337x": {"url": "https://1337x.to/search/{q}/1/", "css": "a[href*='/torrent/']", "is_indirect": True},
-    "TorrentGalaxy": {"url": "https://torrentgalaxy.to/torrents.php?search={q}", "css": "a[href^='magnet:?']", "is_indirect": False},
-    "Nyaa": {"url": "https://nyaa.si/?f=0&c=0_0&q={q}", "css": "a[href^='magnet:?']", "is_indirect": False},
-    "Rutracker": {"url": "https://rutracker.org/forum/tracker.php?nm={q}", "css": "a.magnet-link", "is_indirect": False},
-    "Rutor": {"url": "http://rutor.info/search/0/0/100/0/{q}", "css": "a[href^='magnet:?']", "is_indirect": False},
-    "MagnetDL": {"url": "https://www.magnetdl.com/{q[0]}/{q}/", "css": "a[href^='magnet:?']", "is_indirect": False},
-    "YTS": {"url": "https://yts.mx/browse-movies/{q}/all/all/0/latest", "css": "a.browse-movie-link", "is_indirect": True},
-    "EZTV": {"url": "https://eztvx.to/search/{q}", "css": "a[href^='magnet:?']", "is_indirect": False}
-}
+class TorrentSearch:
+    def __init__(self):
+        # Aqui estão os 10 que você me passou, mapeados para o seu buscador
+        self.providers = {
+            "1337x": {"url": "https://1337x.to/search/{q}/1/", "css": "a[href*='/torrent/']"},
+            "TorrentGalaxy": {"url": "https://torrentgalaxy.to/torrents.php?search={q}", "css": "div.tgxtable a[href*='/torrent/']"},
+            "Nyaa": {"url": "https://nyaa.si/?f=0&c=0_0&q={q}", "css": "table.torrent-list a[href*='/view/']"},
+            "Rutracker": {"url": "https://rutracker.org/forum/tracker.php?nm={q}", "css": "a.tLink"},
+            "Rutor": {"url": "http://rutor.info/search/0/0/000/0/{q}", "css": "a[href*='/torrent/']"},
+            "MagnetDL": {"url": "https://www.magnetdl.com/{q[0]}/{q}/", "css": "table.download a[href*='magnet:?']"},
+            "EzTV": {"url": "https://eztv.re/search/{q}", "css": "a.epinfo"},
+            "ThePirateBay": {"url": "https://thepiratebay.party/search/{q}/1/99/0", "css": "a.detLink"},
+            "Kickass": {"url": "https://kickass.torrentbay.st/usearch/{q}/", "css": "a.torType"},
+            "LimeTorrents": {"url": "https://www.limetorrents.pro/search/all/{q}/", "css": "div.tt-name a[href*='/torrent/']"}
+        }
 
-def get_magnet(scraper, url, css, is_indirect):
-    try:
-        r = scraper.get(url, timeout=5)
-        soup = BeautifulSoup(r.text, 'html.parser')
-        link = soup.select_one(css)
-        if not link: return None
+    def fetch(self, query):
+        results = {}
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        query_formatted = query.replace(" ", "+")
         
-        if is_indirect:
-            # Segue para a página interna do torrent
-            target = "https://1337x.to" + link['href'] if "1337x" in url else "https://yts.mx" + link['href']
-            r2 = scraper.get(target, timeout=5)
-            magnet = BeautifulSoup(r2.text, 'html.parser').select_one("a[href^='magnet:?']")
-            return magnet['href'] if magnet else None
-        return link['href']
-    except: return None
-
-def buscar_stream_torrent(query):
-    query_fmt = query.replace(" ", "+")
-    scraper = cloudscraper.create_scraper()
-    
-    def processar(nome, cfg):
-        url = cfg["url"].format(q=query_fmt)
-        return get_magnet(scraper, url, cfg["css"], cfg["is_indirect"])
-
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        results = list(executor.map(lambda p: processar(p[0], p[1]), PROVIDERS.items()))
-    
-    # Retorna apenas os links válidos encontrados
-    return [r for r in results if r]
+        for name, config in self.providers.items():
+            try:
+                url = config["url"].replace("{q}", query_formatted)
+                resp = requests.get(url, headers=headers, timeout=8)
+                if resp.status_code == 200:
+                    soup = BeautifulSoup(resp.text, 'html.parser')
+                    elements = soup.select(config["css"])
+                    results[name] = [el['href'] for el in elements if el.has_attr('href')][:5]
+                else:
+                    results[name] = []
+            except:
+                results[name] = []
+        return results
