@@ -124,12 +124,14 @@ def get_tmdb_meta(imdb_id, tipo):
         sinopse = item.get("overview") or ""
         poster_path = item.get("poster_path")
         poster = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else ""
+        data_lancamento = item.get("release_date") or item.get("first_air_date") or ""
+        ano = data_lancamento[:4] if data_lancamento else None
 
         genre_ids = item.get("genre_ids", [])
         tabela_generi = GENRES_MOVIE if tipo == "movie" else GENRES_TV
         generi = [tabela_generi[g] for g in genre_ids if g in tabela_generi]
 
-        meta = {"titulo": titulo, "sinopse": sinopse, "poster": poster, "generi": generi}
+        meta = {"titulo": titulo, "sinopse": sinopse, "poster": poster, "generi": generi, "ano": ano}
         _tmdb_cache[cache_key] = meta
         return meta
 
@@ -338,8 +340,13 @@ def build_stream(nome_conteudo, url, extra_linha=None):
     """Monta o objeto stream no padrão dos outros addons: name = tag curta,
     title = nome do conteúdo + tamanho (+ linha extra opcional, tipo qualidade)."""
     tamanho = get_file_size(url)
-    linhas = [nome_conteudo]
+    formato = url.split(".")[-1].split("?")[0].split("&")[0].lower()
+    if len(formato) > 4:
+        formato = None
+    linhas = [f"{nome_conteudo} 🇮🇹"]
     detalhe = []
+    if formato:
+        detalhe.append(f".{formato}")
     if tamanho:
         detalhe.append(f"💾 {tamanho}")
     if extra_linha:
@@ -366,17 +373,23 @@ def stream(tipo, stream_id, config_str=None):
     if tipo == "movie":
         for item in DB.get("filmes", []):
             if item["id"] == stream_id:
-                streams.append(build_stream(item["titulo"], item["url"]))
+                tmdb = get_tmdb_meta(item["id"], "movie")
+                ano = tmdb["ano"] if tmdb and tmdb.get("ano") else None
+                nome = f"{item['titulo']} ({ano})" if ano else item["titulo"]
+                streams.append(build_stream(nome, item["url"]))
 
     elif tipo == "series":
         parts = stream_id.split(":")
         base_id = parts[0]
         for item in DB.get("series", []):
             if item["id"] == base_id and len(parts) == 3:
+                tmdb = get_tmdb_meta(item["id"], "series")
+                ano = tmdb["ano"] if tmdb and tmdb.get("ano") else None
                 temporada, episodio = parts[1], parts[2]
                 url = item.get("temporadas", {}).get(temporada, {}).get(episodio)
                 if url:
-                    nome = f"{item['titulo']} S{int(temporada):02d}E{int(episodio):02d}"
+                    titulo_ano = f"{item['titulo']} ({ano})" if ano else item["titulo"]
+                    nome = f"{titulo_ano} S{int(temporada):02d}E{int(episodio):02d}"
                     streams.append(build_stream(nome, url))
 
     elif tipo == "tv":
