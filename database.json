@@ -37,11 +37,13 @@
     {
       "id": "rai_1",
       "titulo": "RAI 1 Diretta",
+      "gruppo": "RAI",
       "url": "https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=2606803&output=16"
     },
     {
       "id": "rai_news24",
       "titulo": "Rai News 24 Diretta",
+      "gruppo": "RAI",
       "url": "https://mediapolis.rai.it/relinker/relinkerServlet.htm?cont=1&output=16"
     }
   ]
