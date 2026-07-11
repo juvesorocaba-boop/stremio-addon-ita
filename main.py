@@ -371,27 +371,23 @@ def stream(tipo, stream_id, config_str=None):
 
     streams = []
 
-    if tipo == "movie":
-        for item in DB.get("filmes", []):
-            if item["id"] == stream_id:
-                tmdb = get_tmdb_meta(item["id"], "movie")
-                ano = tmdb["ano"] if tmdb and tmdb.get("ano") else None
-                nome = f"{item['titulo']} ({ano})" if ano else item["titulo"]
-                streams.append(build_stream(nome, item["url"]))
-                
-                # Busca extra nos indexadores
-                novos_links = buscar_stream_torrent(nome)
-                for link in novos_links:
-                    streams.append(build_stream(nome + " (Extra)", link))
-                    
-                    # --- ACRESCENTE ESTA PARTE APÓS O "for" DO BANCO DE DADOS ---
+   if tipo == "movie":
+        # 1. BUSCA UNIVERSAL (Prioridade agora)
+        # Buscamos sempre, usando o ID do filme solicitado pelo Stremio
         tmdb_extra = get_tmdb_meta(stream_id, "movie")
         if tmdb_extra:
             nome_filme = tmdb_extra["titulo"]
+            # Dispara a busca em todos os indexadores do torrent_source
             novos_links = buscar_stream_torrent(nome_filme)
             for link in novos_links:
                 streams.append(build_stream(nome_filme + " (Extra)", link))
-        # -----------------------------------------------------------
+
+        # 2. BUSCA NO SEU JSON (Complemento)
+        # O código percorre o banco para ver se você tem algum link específico registrado
+        for item in DB.get("filmes", []):
+            if item["id"] == stream_id:
+                nome = item["titulo"]
+                streams.append(build_stream(nome + " (DB)", item["url"]))
 
     elif tipo == "series":
         parts = stream_id.split(":")
