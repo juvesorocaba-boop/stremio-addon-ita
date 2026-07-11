@@ -261,7 +261,7 @@ def stream(tipo, stream_id, config_str=None):
     if tipo == "movie":
         for item in DB.get("filmes", []):
             if item["id"] == stream_id:
-                streams.append({"title": "Cinema Italiano - Film": item["url"]})
+                streams.append({"title": "Cinema Italiano - Film", "url": item["url"]})
 
     elif tipo == "series":
         parts = stream_id.split(":")
