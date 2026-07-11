@@ -103,10 +103,26 @@ def get_tmdb_meta(imdb_id, tipo):
 # Manifest / logo / configure
 # ---------------------------------------------------------------------------
 
+PROVIDER_TAG = {
+    "realdebrid": "RD",
+    "alldebrid": "AD",
+    "torbox": "TB",
+}
+
+
 @app.route('/manifest.json')
 @app.route('/<config_str>/manifest.json')
 def manifest(config_str=None):
-    return jsonify(MANIFEST)
+    cfg = parse_config(config_str)
+    provider = cfg.get("provider")
+    tag = PROVIDER_TAG.get(provider)
+
+    if not tag:
+        return jsonify(MANIFEST)
+
+    m = dict(MANIFEST)
+    m["name"] = f'{MANIFEST["name"]} | {tag}'
+    return jsonify(m)
 
 
 @app.route('/logo.png')
