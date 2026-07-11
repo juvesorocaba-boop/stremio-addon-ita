@@ -261,7 +261,7 @@ def stream(tipo, stream_id, config_str=None):
     if tipo == "movie":
         for item in DB.get("filmes", []):
             if item["id"] == stream_id:
-                streams.append({"title": "Server", "url": item["url"]})
+                streams.append({"title": "Cinema Italiano - Film": item["url"]})
 
     elif tipo == "series":
         parts = stream_id.split(":")
@@ -271,12 +271,12 @@ def stream(tipo, stream_id, config_str=None):
                 temporada, episodio = parts[1], parts[2]
                 url = item.get("temporadas", {}).get(temporada, {}).get(episodio)
                 if url:
-                    streams.append({"title": "Server", "url": url})
+                    streams.append({"title": "Cinema Italiano - Serie", "url": url})
 
     elif tipo == "tv":
         for item in DB.get("canais", []):
             if item["id"] == stream_id:
-                streams.append({"title": "Diretta", "url": item["url"]})
+                streams.append({"title": "Cinema Italiano - TV Diretta", "url": item["url"]})
 
     return jsonify({"streams": streams})
 
