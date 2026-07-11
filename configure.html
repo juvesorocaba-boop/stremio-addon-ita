@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cinema Italiano — Configurazione</title>
+<link rel="icon" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --wine:#5C1A20;
+    --wine-deep:#3A0F13;
+    --ivory:#F1E7D3;
+    --gold:#C9A24B;
+    --green:#1F4B3F;
+    --ink:#161010;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(201,162,75,0.08), transparent 40%),
+      radial-gradient(circle at 80% 90%, rgba(31,75,63,0.15), transparent 45%),
+      var(--wine-deep);
+    color:var(--ivory);
+    font-family:'Work Sans', sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px 16px;
+  }
+  .stub{
+    position:relative;
+    width:100%;
+    max-width:520px;
+    background:linear-gradient(180deg, var(--wine) 0%, #4a1519 100%);
+    border-radius:18px;
+    box-shadow:0 30px 60px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05);
+    padding:44px 40px 36px;
+    overflow:hidden;
+  }
+  /* sprocket holes — signature element, film-reel edge */
+  .sprockets{
+    position:absolute;
+    left:0; right:0;
+    display:flex;
+    justify-content:space-evenly;
+    padding:0 18px;
+  }
+  .sprockets span{
+    width:14px; height:14px;
+    background:var(--wine-deep);
+    border-radius:3px;
+    box-shadow:inset 0 0 0 1px rgba(201,162,75,0.25);
+  }
+  .sprockets.top{top:12px;}
+  .sprockets.bottom{bottom:12px;}
+
+  .eyebrow{
+    font-size:12px;
+    letter-spacing:0.22em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin:14px 0 6px;
+    text-align:center;
+  }
+  h1{
+    font-family:'Playfair Display', serif;
+    font-weight:900;
+    font-size:32px;
+    line-height:1.1;
+    margin:0 0 4px;
+    text-align:center;
+    color:var(--ivory);
+  }
+  .subtitle{
+    text-align:center;
+    font-size:13.5px;
+    color:rgba(241,231,211,0.65);
+    margin:0 0 30px;
+  }
+  .field{
+    margin-bottom:20px;
+  }
+  label{
+    display:block;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.12em;
+    color:var(--gold);
+    margin-bottom:8px;
+  }
+  select, input[type="text"]{
+    width:100%;
+    padding:12px 14px;
+    border-radius:10px;
+    border:1px solid rgba(201,162,75,0.35);
+    background:rgba(0,0,0,0.25);
+    color:var(--ivory);
+    font-family:'Work Sans', sans-serif;
+    font-size:15px;
+    appearance:none;
+    outline:none;
+    transition:border-color .15s ease;
+  }
+  select:focus, input[type="text"]:focus{
+    border-color:var(--gold);
+  }
+  select{
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9'><path d='M0 0L7 8L14 0' fill='none' stroke='%23C9A24B' stroke-width='1.6'/></svg>");
+    background-repeat:no-repeat;
+    background-position:right 16px center;
+  }
+  .token-field{
+    max-height:0;
+    opacity:0;
+    overflow:hidden;
+    transition:max-height .25s ease, opacity .2s ease;
+  }
+  .token-field.open{
+    max-height:120px;
+    opacity:1;
+    margin-top:12px;
+  }
+  .hint{
+    font-size:12px;
+    color:rgba(241,231,211,0.5);
+    margin-top:6px;
+    line-height:1.4;
+  }
+  button.generate{
+    width:100%;
+    padding:15px;
+    margin-top:10px;
+    border:none;
+    border-radius:10px;
+    background:var(--gold);
+    color:var(--wine-deep);
+    font-family:'Work Sans', sans-serif;
+    font-weight:600;
+    font-size:15px;
+    letter-spacing:0.02em;
+    cursor:pointer;
+    transition:transform .1s ease, background .15s ease;
+  }
+  button.generate:hover{ background:#dab263; }
+  button.generate:active{ transform:scale(0.98); }
+
+  .result{
+    display:none;
+    margin-top:26px;
+    background:var(--ivory);
+    color:var(--ink);
+    border-radius:12px;
+    padding:22px 20px;
+    position:relative;
+  }
+  .result.show{ display:block; }
+  .result::before, .result::after{
+    content:"";
+    position:absolute;
+    top:50%;
+    width:22px; height:22px;
+    background:var(--wine);
+    border-radius:50%;
+    transform:translateY(-50%);
+  }
+  .result::before{ left:-11px; }
+  .result::after{ right:-11px; }
+  .result-title{
+    font-family:'Playfair Display', serif;
+    font-weight:700;
+    font-size:16px;
+    margin:0 0 12px;
+    border-bottom:1.5px dashed rgba(58,15,19,0.25);
+    padding-bottom:10px;
+  }
+  .result-row{
+    font-size:12.5px;
+    color:#5a4a3a;
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:6px;
+  }
+  .result-row b{ color:var(--ink); font-weight:600; }
+  .link-box{
+    margin-top:14px;
+    font-size:12px;
+    word-break:break-all;
+    background:rgba(58,15,19,0.06);
+    border-radius:8px;
+    padding:10px 12px;
+    font-family:monospace;
+  }
+  .actions{
+    display:flex;
+    gap:10px;
+    margin-top:14px;
+  }
+  .actions button{
+    flex:1;
+    padding:11px;
+    border-radius:8px;
+    border:none;
+    font-weight:600;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .btn-install{ background:var(--green); color:var(--ivory); }
+  .btn-copy{ background:transparent; color:var(--wine); border:1.5px solid var(--wine) !important; }
+
+  footer{
+    text-align:center;
+    margin-top:24px;
+    font-size:11.5px;
+    color:rgba(241,231,211,0.4);
+  }
+</style>
+</head>
+<body>
+
+<div class="stub">
+  <div class="sprockets top">
+    <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
+
+  <div class="eyebrow">Cinema Italiano</div>
+  <h1>Configura il tuo addon</h1>
+  <p class="subtitle">Scegli qualità e provider. Genereremo il tuo link di installazione personale.</p>
+
+  <div class="field">
+    <label for="quality">Qualità preferita</label>
+    <select id="quality">
+      <option value="auto">Auto (migliore disponibile)</option>
+      <option value="2160p">4K — 2160p</option>
+      <option value="1080p" selected>1080p</option>
+      <option value="720p">720p</option>
+      <option value="480p">480p</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label for="provider">Provider</label>
+    <select id="provider" onchange="toggleToken()">
+      <option value="none" selected>Nessuno (link diretto)</option>
+      <option value="realdebrid">Real-Debrid</option>
+      <option value="alldebrid">AllDebrid</option>
+      <option value="torbox">TorBox</option>
+    </select>
+    <div class="token-field" id="tokenField">
+      <label for="token">Token / API Key</label>
+      <input type="text" id="token" placeholder="Incolla qui la tua chiave">
+      <p class="hint">Il provider è salvato per un uso futuro: l'addon oggi funziona via link diretto (DDL), non torrent — quindi il token non altera ancora gli stream restituiti.</p>
+    </div>
+  </div>
+
+  <button class="generate" onclick="generateLink()">Genera link di installazione</button>
+
+  <div class="result" id="result">
+    <div class="result-title">Il tuo biglietto d'ingresso</div>
+    <div class="result-row"><span>Qualità</span><b id="rQuality">—</b></div>
+    <div class="result-row"><span>Provider</span><b id="rProvider">—</b></div>
+    <div class="link-box" id="linkBox"></div>
+    <div class="actions">
+      <button class="btn-install" onclick="openInStremio()">Apri in Stremio</button>
+      <button class="btn-copy" onclick="copyLink()">Copia link</button>
+    </div>
+  </div>
+
+  <footer>stremio-addon-ita.onrender.com</footer>
+
+  <div class="sprockets bottom">
+    <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
+</div>
+
+<script>
+  function toggleToken(){
+    const provider = document.getElementById('provider').value;
+    const field = document.getElementById('tokenField');
+    if(provider !== 'none'){ field.classList.add('open'); }
+    else { field.classList.remove('open'); }
+  }
+
+  function b64urlEncode(str){
+    return btoa(unescape(encodeURIComponent(str)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  }
+
+  let manifestUrl = "";
+
+  function generateLink(){
+    const quality = document.getElementById('quality').value;
+    const provider = document.getElementById('provider').value;
+    const token = document.getElementById('token').value.trim();
+
+    const config = { quality, provider };
+    if(provider !== 'none' && token){ config.token = token; }
+
+    const encoded = b64urlEncode(JSON.stringify(config));
+    const host = window.location.origin;
+    manifestUrl = host + "/" + encoded + "/manifest.json";
+
+    document.getElementById('rQuality').textContent =
+      { auto:"Auto", "2160p":"4K", "1080p":"1080p", "720p":"720p", "480p":"480p" }[quality];
+    document.getElementById('rProvider').textContent =
+      { none:"Nessuno (diretto)", realdebrid:"Real-Debrid", alldebrid:"AllDebrid", torbox:"TorBox" }[provider];
+    document.getElementById('linkBox').textContent = manifestUrl;
+    document.getElementById('result').classList.add('show');
+  }
+
+  function openInStremio(){
+    if(!manifestUrl) return;
+    window.location.href = "stremio://" + manifestUrl.replace(/^https?:\/\//, '');
+  }
+
+  function copyLink(){
+    if(!manifestUrl) return;
+    navigator.clipboard.writeText(manifestUrl);
+  }
+</script>
+
+</body>
+</html>

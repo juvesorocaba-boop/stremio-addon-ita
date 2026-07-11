@@ -3,6 +3,20 @@ import json
 import requests
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
+import base64
+import json
+from flask import render_template
+
+def parse_config(config_str):
+    """Decodifica il config (qualità/provider/token) dal segmento URL, se presente."""
+    if not config_str:
+        return {}
+    try:
+        padded = config_str + "=" * (-len(config_str) % 4)
+        decoded = base64.urlsafe_b64decode(padded.encode()).decode()
+        return json.loads(decoded)
+    except Exception:
+        return {}
 
 app = Flask(__name__)
 CORS(app)
@@ -97,6 +111,12 @@ def catalog(tipo, cat_id, extra=None):
     search_query = None
     if extra and extra.startswith("search="):
         search_query = extra.replace("search=", "").strip().lower()
+        
+        
+@app.route("/configure")
+@app.route("/<config_str>/configure")
+def configure(config_str=None):
+    return render_template("configure.html")
 
     metas = []
 
